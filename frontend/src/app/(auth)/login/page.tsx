@@ -12,7 +12,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -26,7 +25,16 @@ export default function LoginPage() {
     if (mode === "signin") {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) { setError(error.message); setLoading(false); return; }
-      router.push("/dashboard/");
+
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: active } = await supabase
+        .from("mandal_memberships")
+        .select("id")
+        .eq("user_id", user!.id)
+        .eq("status", "active")
+        .limit(1)
+        .maybeSingle();
+      router.push(active ? "/dashboard/" : "/join-mandal");
     } else {
       const { error } = await supabase.auth.signUp({
         email,
@@ -34,17 +42,13 @@ export default function LoginPage() {
         options: { data: { full_name: fullName } },
       });
       if (error) { setError(error.message); setLoading(false); return; }
-      setSuccess("Account created! You can now sign in.");
-      setMode("signin");
-      setPassword("");
-      setLoading(false);
+      router.push("/join-mandal");
     }
   }
 
   function switchMode() {
     setMode(m => m === "signin" ? "signup" : "signin");
     setError(null);
-    setSuccess(null);
   }
 
   return (
@@ -127,9 +131,6 @@ export default function LoginPage() {
 
               {error && (
                 <p className="text-xs text-red-600 bg-red-50 rounded-xl px-4 py-2.5">{error}</p>
-              )}
-              {success && (
-                <p className="text-xs text-green-700 bg-green-50 rounded-xl px-4 py-2.5">{success}</p>
               )}
 
               <button

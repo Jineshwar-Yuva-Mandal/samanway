@@ -1,3 +1,4 @@
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import PageHeader from "@/components/shared/PageHeader";
 import { Card, Badge } from "@/components/ui";
 import { Users, Calendar, ClipboardList, Wallet } from "lucide-react";
@@ -9,10 +10,14 @@ const stats = [
   { label: "Pending Fines", value: "—", icon: Wallet,        badge: "unpaid" },
 ];
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const firstName = user?.user_metadata?.full_name?.split(" ")[0] ?? "Member";
+
   return (
     <>
-      <PageHeader title="Dashboard" subtitle="Overview" />
+      <PageHeader title="Dashboard" subtitle={`Welcome back, ${firstName}`} />
       <div className="max-w-5xl mx-auto px-6 py-12">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
           {stats.map((s) => (
@@ -34,7 +39,7 @@ export default function DashboardPage() {
         </div>
         <Card>
           <p className="text-sm text-slate-400 text-center py-8">
-            Connect your Supabase project to see live data here.
+            Live data coming soon — schema is ready, features in progress.
           </p>
         </Card>
       </div>
