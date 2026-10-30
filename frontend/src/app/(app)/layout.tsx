@@ -19,7 +19,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!hasActive) {
     const pending = (memberships ?? [])
       .filter(m => m.status === "pending")
-      .map(m => ({ name: (m.mandals as { name: string } | null)?.name ?? "Unknown" }));
+      .map(m => ({ name: ((m.mandals as unknown) as { name: string } | null)?.name ?? "Unknown" }));
     return <PendingApprovalScreen pendingMandals={pending} />;
   }
 
