@@ -2,35 +2,53 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 export default function LoginPage() {
   const router = useRouter();
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function handleLogin(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setSuccess(null);
     setLoading(true);
 
     const supabase = createSupabaseBrowserClient();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
 
-    if (error) {
-      setError(error.message);
+    if (mode === "signin") {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) { setError(error.message); setLoading(false); return; }
+      router.push("/dashboard/");
+    } else {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name: fullName } },
+      });
+      if (error) { setError(error.message); setLoading(false); return; }
+      setSuccess("Account created! You can now sign in.");
+      setMode("signin");
+      setPassword("");
       setLoading(false);
-      return;
     }
+  }
 
-    router.push("/dashboard/");
+  function switchMode() {
+    setMode(m => m === "signin" ? "signup" : "signin");
+    setError(null);
+    setSuccess(null);
   }
 
   return (
-    <main className="min-h-screen bg-jain-cream flex items-center justify-center px-6 pt-24">
+    <main className="min-h-screen bg-slate-50 flex items-center justify-center px-6 pt-24 pb-16">
       <motion.div
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
@@ -40,58 +58,100 @@ export default function LoginPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#D4AF37] mb-2">
-            Welcome back
+            {mode === "signin" ? "Welcome back" : "Create account"}
           </p>
-          <h1 className="text-3xl font-serif font-bold text-slate-900">Samanway</h1>
-          <p className="mt-2 text-sm text-slate-500">Sign in to your mandal portal</p>
+          <h1 className="text-3xl font-bold text-slate-900" style={{ fontFamily: "var(--font-cinzel)" }}>
+            Samanway
+          </h1>
+          <p className="mt-2 text-sm text-slate-500">
+            {mode === "signin" ? "Sign in to your mandal portal" : "Join your mandal on Samanway"}
+          </p>
         </div>
 
         {/* Form */}
-        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm shadow-slate-100/60 p-8">
-          <form onSubmit={handleLogin} className="flex flex-col gap-5">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
-                Email
-              </label>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/30 focus:border-[#D4AF37]"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
-                Password
-              </label>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/30 focus:border-[#D4AF37]"
-              />
-            </div>
-
-            {error && (
-              <p className="text-xs text-red-600 bg-red-50 rounded-xl px-4 py-2.5">{error}</p>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="mt-2 w-full rounded-full bg-slate-900 py-3 text-[11px] font-black uppercase tracking-[0.2em] text-white transition-colors hover:bg-[#D4AF37] hover:text-slate-950 disabled:opacity-50"
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8">
+          <AnimatePresence mode="wait">
+            <motion.form
+              key={mode}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+              onSubmit={handleSubmit}
+              className="flex flex-col gap-5"
             >
-              {loading ? "Signing in…" : "Sign in"}
-            </button>
-          </form>
+              {mode === "signup" && (
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
+                    Full Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Your full name"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/30 focus:border-[#D4AF37]"
+                  />
+                </div>
+              )}
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/30 focus:border-[#D4AF37]"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  minLength={6}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/30 focus:border-[#D4AF37]"
+                />
+              </div>
+
+              {error && (
+                <p className="text-xs text-red-600 bg-red-50 rounded-xl px-4 py-2.5">{error}</p>
+              )}
+              {success && (
+                <p className="text-xs text-green-700 bg-green-50 rounded-xl px-4 py-2.5">{success}</p>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="mt-2 w-full rounded-full bg-slate-900 py-3 text-[11px] font-black uppercase tracking-[0.2em] text-white transition-colors hover:bg-[#D4AF37] hover:text-slate-950 disabled:opacity-50"
+              >
+                {loading ? "Please wait…" : mode === "signin" ? "Sign In" : "Create Account"}
+              </button>
+            </motion.form>
+          </AnimatePresence>
         </div>
 
-        <p className="mt-6 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-slate-300">
+        {/* Toggle */}
+        <p className="mt-5 text-center text-xs text-slate-400">
+          {mode === "signin" ? "Don't have an account? " : "Already have an account? "}
+          <button onClick={switchMode} className="font-bold text-slate-700 hover:text-[#D4AF37] transition-colors">
+            {mode === "signin" ? "Sign Up" : "Sign In"}
+          </button>
+        </p>
+
+        <p className="mt-4 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-slate-300">
           Samanway · Mandal Platform
         </p>
       </motion.div>
