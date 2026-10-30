@@ -1,8 +1,14 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { getSupabaseConfiguration } from "@/lib/supabase/config";
+import { hasSupabaseConfiguration, getSupabaseConfiguration } from "@/lib/supabase/config";
 
 export async function middleware(request: NextRequest) {
+  // If Supabase isn't configured yet, pass through — avoids 500 on Vercel
+  // before env vars are set, or during local dev without .env.local
+  if (!hasSupabaseConfiguration()) {
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const { url, publishableKey } = getSupabaseConfiguration();
