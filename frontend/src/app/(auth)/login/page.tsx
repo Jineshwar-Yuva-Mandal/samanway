@@ -12,6 +12,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [isSuccess, setIsSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -35,19 +36,31 @@ export default function LoginPage() {
         .maybeSingle();
       router.push(active ? "/dashboard/" : "/join-mandal");
     } else {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: { data: { full_name: fullName } },
       });
       if (error) { setError(error.message); setLoading(false); return; }
-      router.push("/join-mandal");
+
+      // If session exists → email confirm is OFF, redirect directly
+      if (data.session) {
+        router.push("/join-mandal");
+      } else {
+        // Email confirm is ON — user needs to verify before they can log in
+        setLoading(false);
+        setIsSuccess(true);
+        setMode("signin");
+        setPassword("");
+        setError("Account created! Check your email to confirm, then sign in.");
+      }
     }
   }
 
   function switchMode() {
     setMode(m => m === "signin" ? "signup" : "signin");
     setError(null);
+    setIsSuccess(false);
   }
 
   return (
@@ -129,7 +142,9 @@ export default function LoginPage() {
               </div>
 
               {error && (
-                <p className="text-xs text-red-600 bg-red-50 rounded-xl px-4 py-2.5">{error}</p>
+                <p className={`text-xs rounded-xl px-4 py-2.5 ${isSuccess ? "text-green-700 bg-green-50" : "text-red-600 bg-red-50"}`}>
+                  {error}
+                </p>
               )}
 
               <button
